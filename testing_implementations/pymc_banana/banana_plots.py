@@ -1,13 +1,12 @@
-import pymc as pm
 import arviz as az
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import gaussian_kde
+import pymc as pm
 from multiprocessing import freeze_support
 
 # ------------------------------------------------------------------
-# Global style
+# Global style config
 # ------------------------------------------------------------------
 mpl.rcParams.update({
     "figure.dpi": 120,
@@ -26,24 +25,29 @@ mpl.rcParams.update({
     "ytick.direction": "out",
 })
 
-COL_MAIN       = "#1f77b4"   # blue
-COL_DIVERGENCE = "#d62728"   # red
-CHAIN_COLORS   = ["#4c72b0", "#dd8452", "#55a868", "#c44e52"]
+COL_MAIN = "#1f77b4"  # blue
+COL_DIVERGENCE = "#d62728"  # red
+CHAIN_COLORS = ["#4c72b0", "#dd8452", "#55a868", "#c44e52"]
 
 
 # ------------------------------------------------------------------
 # Custom trace plot with divergence ticks
 # ------------------------------------------------------------------
 def custom_trace(idata, var, title, filename):
-    draws = idata.posterior[var].values          # (chain, draw)
+    draws = idata.posterior[var].values  # (chain, draw)
     n_chains, n_draws = draws.shape
     diverging = idata.sample_stats["diverging"].values
 
     fig, ax = plt.subplots(figsize=(10, 3.2))
 
     for c in range(n_chains):
-        ax.plot(draws[c], color=CHAIN_COLORS[c % len(CHAIN_COLORS)],
-                lw=0.8, alpha=0.9, label=f"Chain {c+1}")
+        ax.plot(
+            draws[c],
+            color=CHAIN_COLORS[c % len(CHAIN_COLORS)],
+            lw=0.8,
+            alpha=0.9,
+            label=f"Chain {c+1}",
+        )
 
     # Divergence markers under the axis
     ymin, ymax = ax.get_ylim()
@@ -52,10 +56,16 @@ def custom_trace(idata, var, title, filename):
     for c in range(n_chains):
         div_idx = np.where(diverging[c])[0]
         if len(div_idx):
-            ax.plot(div_idx, [tick_y] * len(div_idx),
-                    marker="|", linestyle="none",
-                    color=COL_DIVERGENCE, markersize=6, markeredgewidth=0.9,
-                    alpha=0.85)
+            ax.plot(
+                div_idx,
+                [tick_y] * len(div_idx),
+                marker="|",
+                linestyle="none",
+                color=COL_DIVERGENCE,
+                markersize=6,
+                markeredgewidth=0.9,
+                alpha=0.85,
+            )
 
     ax.set_ylim(ymin - 0.08 * span, ymax)
     ax.set_xlabel("Draw")
@@ -64,10 +74,23 @@ def custom_trace(idata, var, title, filename):
     ax.legend(loc="upper right", ncols=n_chains, fontsize=8)
 
     n_div = int(diverging.sum())
-    ax.text(0.01, 0.97, f"Divergences: {n_div}",
-            transform=ax.transAxes, va="top", ha="left", fontsize=9,
-            color=COL_DIVERGENCE if n_div else "#444",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="0.8", lw=0.6, alpha=0.9))
+    ax.text(
+        0.01,
+        0.97,
+        f"Divergences: {n_div}",
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=9,
+        color=COL_DIVERGENCE if n_div else "#444",
+        bbox=dict(
+            boxstyle="round,pad=0.3",
+            fc="white",
+            ec="0.8",
+            lw=0.6,
+            alpha=0.9,
+        ),
+    )
 
     fig.tight_layout()
     fig.savefig(filename, bbox_inches="tight")
@@ -86,18 +109,30 @@ def banana_scatter(idata, title, filename):
 
     # Density-colored non-divergent points
     ok = ~div
-    sc = ax.scatter(x[ok], y[ok],
-                    c=np.abs(y[ok]), cmap="viridis",
-                    s=10, alpha=0.55, linewidths=0)
+    sc = ax.scatter(
+        x[ok],
+        y[ok],
+        c=y[ok],  # Colored by y position to reflect the twist
+        cmap="viridis",
+        s=10,
+        alpha=0.55,
+        linewidths=0,
+    )
     cbar = fig.colorbar(sc, ax=ax, pad=0.02)
-    cbar.set_label("|y|")
+    cbar.set_label("y value")
 
     # Divergences (if any)
     if div.sum() > 0:
-        ax.scatter(x[div], y[div],
-                   marker="x", s=60, linewidths=1.6,
-                   color=COL_DIVERGENCE, zorder=5,
-                   label=f"Divergences (n={int(div.sum())})")
+        ax.scatter(
+            x[div],
+            y[div],
+            marker="x",
+            s=60,
+            linewidths=1.6,
+            color=COL_DIVERGENCE,
+            zorder=5,
+            label=f"Divergences (n={int(div.sum())})",
+        )
         ax.legend(loc="upper left", fontsize=9)
 
     ax.set_xlabel("x")
@@ -109,21 +144,47 @@ def banana_scatter(idata, title, filename):
     plt.show()
 
 
-# ==================================================================
-# MAIN
-# ==================================================================
-freeze_support()
+# ------------------------------------------------------------------
+# Generalized PyMC Banana Posterior Model Formulation
+# ------------------------------------------------------------------
+def get_banana_model(data_dict: dict) -> pm.Model:
+    """Generalized PyMC Banana Posterior matching PosteriorDB standards.
 
+    Expects data_dict with keys: 'D', 'v', 'b'
+    """
+    D = data_dict.get("D", 2)
+    v = data_dict.get("v", 100.0)
+    b = data_dict.get("b", 0.1)
+
+    with pm.Model() as model:
+        sigma_x0 = np.sqrt(v)
+
+        # First coordinate
+        x = pm.Normal("x", mu=0, sigma=sigma_x0)
+
+        # Twisting transformation for second coordinate (aligned sign)
+        mu_y = -b * (x**2 - v)
+        y = pm.Normal("y", mu=mu_y, sigma=1.0)
+
+        # Remaining dimensions for D > 2
+        if D > 2:
+            pm.Normal("y_rest", mu=0, sigma=1.0, shape=D - 2)
+
+    return model
+
+
+# ==================================================================
+# MAIN EXECUTION
+# ==================================================================
 if __name__ == "__main__":
-    print("=== Generating styled diagnostic plots for Haario banana ===\n")
+    freeze_support()
+    print("--- Sampling Haario Banana Posterior via PyMC ---")
 
-    b = 0.1
+    # Configuration Dictionary
+    data_dict = {"D": 10, "v": 100.0, "b": 0.1}
+    banana_model = get_banana_model(data_dict)
 
-    print("Running improved banana model...")
-    with pm.Model() as banana_model:
-        x = pm.Normal("x", mu=0, sigma=10)
-        y = pm.Normal("y", mu=b * (x**2 - 100), sigma=1)
-
+    with banana_model:
         idata = pm.sample(
             draws=1000,
             tune=2000,
@@ -131,17 +192,25 @@ if __name__ == "__main__":
             cores=1,
             target_accept=0.95,
             random_seed=42,
-            progressbar=True
+            progressbar=True,
         )
 
-    print("\nCreating styled plots...")
+    print("\nSampling finished!")
+    divergences = idata.sample_stats["diverging"].sum().item()
+    print(f"Number of Divergent Transitions: {divergences}")
+    print("\nSummary:")
+    print(az.summary(idata, var_names=["x", "y"]))
 
-    # Trace plots
+    print("\nCreating styled diagnostic plots...")
+
+    # Trace plots for main parameters
     custom_trace(idata, "x", "Haario Banana — Trace of x", "banana_trace_x.png")
     custom_trace(idata, "y", "Haario Banana — Trace of y", "banana_trace_y.png")
 
-    # Banana scatter
-    banana_scatter(idata, "Haario Banana — Scatter (x vs y)", "banana_scatter.png")
+    # Joint scatter plot (x vs y)
+    banana_scatter(
+        idata, "Haario Banana — Scatter (x vs y)", "banana_scatter.png"
+    )
 
     print("\nPlots saved:")
     print("  - banana_trace_x.png")
