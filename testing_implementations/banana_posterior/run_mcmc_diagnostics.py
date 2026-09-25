@@ -32,6 +32,7 @@ stan_fit = stan_model.sample(
     chains=CHAINS,
     iter_warmup=WARMUP,
     iter_sampling=DRAWS,
+    adapt_delta=0.95,
     seed=SEED,
     show_progress=True
 )
@@ -56,6 +57,7 @@ with pm.Model() as pymc_banana:
         draws=DRAWS,
         tune=WARMUP,
         chains=CHAINS,
+        target_accept=0.95,  # Improve convergence for banana-shaped posterior
         cores=1,  # Keep it sequential or adjust based on CPU cores
         random_seed=SEED,
         progressbar=True
