@@ -11,22 +11,27 @@ model {
 }
 */
 data {
-    int<lower=2> D;       // Dimensions
-    real<lower=0> v;      // Variance of first dimension (e.g. 100.0)
-    real b;               // Curvature parameter (e.g. 0.1)
+  int<lower=2> D;        // Target dimension (e.g., 2, 4, 8 from Haario et al., 1999)
 }
+
+transformed data {
+  real v = 100.0;        // Variance of first coordinate y[1] (Haario et al., 1999)
+  real b = 0.1;         // Curvature parameter for parabolic transformation
+}
+
 parameters {
-    vector[D] y;
+  vector[D] y;
 }
+
 model {
-    // First coordinate: N(0, sqrt(v))
-    y[1] ~ normal(0, sqrt(v));
-    
-    // Second coordinate twisted by parabola
-    y[2] ~ normal(-b * (square(y[1]) - v), 1.0);
-    
-    // Remaining dimensions (if D > 2)
-    if (D > 2) {
-        y[3:D] ~ normal(0, 1.0);
-    }
+  // First coordinate: N(0, sqrt(v))
+  y[1] ~ normal(0, sqrt(v));
+
+  // Second coordinate twisted by parabola
+  y[2] ~ normal(-b * (square(y[1]) - v), 1.0);
+
+  // Remaining dimensions (if D > 2)
+  if (D > 2) {
+    y[3:D] ~ normal(0, 1.0);
+  }
 }
