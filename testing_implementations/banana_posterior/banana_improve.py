@@ -32,7 +32,7 @@ if __name__ == "__main__":
   freeze_support()
   print("--- Sampling Haario Banana Posterior via PyMC ---")
 
-  data_dict = {"D": 8}  # Target dimension (e.g., 2, 4, 8 Haario et al., 1999)
+  data_dict = {"D": 8} #2, 4, 8 Haario et al. (1999)
   banana_model = get_banana_model(data_dict)
 
   with banana_model:
