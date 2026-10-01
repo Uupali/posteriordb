@@ -6,7 +6,7 @@ import pymc as pm
 def get_banana_model(data_dict: dict) -> pm.Model:
   """PyMC Banana Posterior.
 
-  Expects data_dict with key: 'D'
+  Expects data_dict with keys 'D' (dimension) and 'b' (curvature parameter).
   """
   D = int(data_dict["D"])
   b = float(data_dict["b"])
@@ -32,7 +32,7 @@ if __name__ == "__main__":
   freeze_support()
   print("--- Sampling Haario Banana Posterior via PyMC ---")
 
-  data_dict = {"D": 8} #2, 4, 8 Haario et al. (1999)
+  data_dict = {"D": 8, "b": 0.1} #2, 4, 8 Haario et al. (1999)
   banana_model = get_banana_model(data_dict)
 
   with banana_model:
