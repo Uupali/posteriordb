@@ -109,19 +109,26 @@ check_posterior_quality <- function(fit, verbose = TRUE) {
 library(posterior)
 library(rstan)
 library(posteriordb)
+options(mc.cores = parallel::detectCores())
 
 
-my_pdb <- pdb_local(".")
-po <- posterior("neals_funnel-neals_funnel_noncentered", my_pdb)
+# my_pdb <- pdb_local(".")
+# po <- posterior("neals_funnel-neals_funnel_noncentered", my_pdb)
 
-funnel_data <- pdb_data(po)
-funnel_code <- stan_code(po)
+# funnel_data <- pdb_data(po)
+# funnel_code <- stan_code(po)
 
-mod <- stan_model(model_code = funnel_code, model_name = "neals_funnel_noncentered")
+# load from stan file 
+banana_code <- readLines("testing_implementations/banana_posterior/banana.stan")
 
+mod <- stan_model(model_code = banana_code, model_name = "banana_8d_strong")
+banana_data <- list(
+  D = 8
+)
+print(banana_code)
 fit <- sampling(
   mod, 
-  data = funnel_data, 
+  data = banana_data, 
   chains = 10,              # Many chains to ensure thorough exploration
   iter = 20000,             # High iteration count
   warmup = 10000, 
