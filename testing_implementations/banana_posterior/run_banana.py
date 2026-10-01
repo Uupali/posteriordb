@@ -19,7 +19,7 @@ model = cmdstanpy.CmdStanModel(stan_file=stan_file_path)
 print("Model compiled successfully!")
 
 # 4. Define the input data dictionary required by banana.stan
-data_dict = {"D": 8} #2, 4, 8 Haario et al. (1999)
+data_dict = {"D": 8, "b": 0.1} #2, 4, 8 Haario et al. (1999)
 
 # 5. Run the MCMC sampler
 print("Running MCMC sampling chains...")
