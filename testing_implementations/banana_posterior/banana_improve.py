@@ -9,8 +9,8 @@ def get_banana_model(data_dict: dict) -> pm.Model:
   Expects data_dict with key: 'D'
   """
   D = int(data_dict["D"])
+  b = float(data_dict["b"])
   v = 100
-  b = 0.1
 
   with pm.Model() as model:
     sigma_x0 = np.sqrt(v)
