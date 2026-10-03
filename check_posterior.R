@@ -112,23 +112,21 @@ library(posteriordb)
 options(mc.cores = parallel::detectCores())
 
 
-# my_pdb <- pdb_local(".")
-# po <- posterior("neals_funnel-neals_funnel_noncentered", my_pdb)
+my_pdb <- pdb_local(".")
+po <- posterior("banana_2d_strong-banana", my_pdb)
 
-# funnel_data <- pdb_data(po)
-# funnel_code <- stan_code(po)
+data <- pdb_data(po)
+code <- stan_code(po)
+print(code)
+print(data)
 
 # load from stan file 
-banana_code <- readLines("testing_implementations/banana_posterior/banana.stan")
 
-mod <- stan_model(model_code = banana_code, model_name = "banana_8d_strong")
-banana_data <- list(
-  D = 8
-)
-print(banana_code)
+mod <- stan_model(model_code = code, model_name = "banana_2d_strong")
+
 fit <- sampling(
   mod, 
-  data = banana_data, 
+  data = data, 
   chains = 10,              # Many chains to ensure thorough exploration
   iter = 20000,             # High iteration count
   warmup = 10000, 
@@ -141,3 +139,48 @@ fit <- sampling(
 )
 
 results <- check_posterior_quality(fit, verbose = TRUE)
+# autocorrelation fails for 2d_moderate 
+# divergence and autocorrelation fails for 2d_strong
+# 8d strong passes all checks
+
+
+#### true posterior draws for banana distribution (8d, b=0.1)
+N <- 10000
+v <- 100.0
+b <- 0.03
+
+x_draws <- rnorm(N, mean = 0, sd = sqrt(v))
+y_draws <- rnorm(N, mean = -b * (x_draws^2 - v), sd = 1)
+
+# Generate a matrix of 6 independent N(0,1) vectors
+# y_rest_matrix <- matrix(rnorm(N * 6, mean = 0, sd = 1), nrow = N, ncol = 6)
+
+# Combine into a dataframe
+perfect_draws <- data.frame(
+  x = x_draws,
+  y = y_draws
+)
+# Add the y_rest columns dynamically (y_rest.1, y_rest.2, etc.)
+# for (i in 1:6) {
+#   perfect_draws_8d[[paste0("y_rest.", i)]] <- y_rest_matrix[, i]
+# }
+
+library(ggplot2)
+
+# Assuming 'perfect_draws' is the dataframe from the analytical script
+ggplot(perfect_draws, aes(x = x, y = y)) +
+  # Use high transparency (alpha) to show density in the center vs the tails
+  geom_point(alpha = 0.1, color = "darkblue", size = 0.5) +
+  # Overlay density contours to highlight the geometry
+  geom_density_2d(color = "orange", linewidth = 0.5) +
+  theme_minimal() +
+  labs(
+    title = "Analytical Reference Draws: 2D Banana Target",
+    subtitle = "Notice the extreme scale difference between the x and y axes",
+    x = "x (Base Dimension: wide variance)",
+    y = "y (Twisted Dimension: tightly constrained)"
+  ) 
+  # Force the axes to show the true scale disparity
+
+# save the plot to a file
+ggsave("banana_2d_03_reference_draws.png", width = 8, height = 6, dpi = 300)

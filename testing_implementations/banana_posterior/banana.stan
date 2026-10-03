@@ -4,22 +4,24 @@ data {
 }
 
 transformed data {
-  real v = 100.0;        // Variance of first coordinate y[1] (Haario et al., 1999)
+  real v = 100.0;        // Variance of first coordinate y[1] (v = 100)
 }
 
 parameters {
-  vector[D] y;
+  real x;           // first coordinate of the banana-shaped distribution
+  real y;            // twisted second coordinate of the banana-shaped distribution
+  vector[D - 2] y_rest;  // remaining independent coordinates (if D > 2)
 }
 
 model {
-  // First coordinate: N(0, sqrt(v))
-  y[1] ~ normal(0, sqrt(v));
-
-  // Second coordinate twisted by parabola
-  y[2] ~ normal(-b * (square(y[1]) - v), 1.0);
-
-  // Remaining dimensions (if D > 2)
+  // 1. First coordinate
+  x ~ normal(0, sqrt(v));
+  
+  // 2. Second coordinate twisted by parabola
+  y ~ normal(-b * (square(x) - v), 1.0);
+  
+  // 3. Remaining independent dimensions
   if (D > 2) {
-    y[3:D] ~ normal(0, 1.0);
+    y_rest ~ normal(0, 1.0);
   }
 }
