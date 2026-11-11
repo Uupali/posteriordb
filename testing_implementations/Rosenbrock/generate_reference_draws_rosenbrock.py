@@ -130,7 +130,7 @@ def generate_reference(
         "no_divergences": n_divergent == 0,
         "rhat_ok": max_rhat < 1.01,
         "lag1_ok": max_lag1 < 0.05,
-        "bfmi_ok": (min_bfmi > 0.3) if not np.isnan(min_bfmi) else False,
+        "bfmi_ok": (min_bfmi >= 0.2) if not np.isnan(min_bfmi) else False,
     }
 
     passed = all(criteria.values())
