@@ -78,7 +78,7 @@ def run_stan(stan_file, data):
     return fit, az.from_cmdstanpy(fit)
 
 
-def run_pymc(make_fn, data):
+def run_pymc(make_fn, data, initvals=None, init="jitter+adapt_diag"):
     model = make_fn(data)
     with model:
         idata = pm.sample(
@@ -88,9 +88,22 @@ def run_pymc(make_fn, data):
             target_accept=TARGET_ACCEPT_PYMC,
             random_seed=SEED,
             progressbar=True,
+            initvals=initvals,
+            init=init
         )
     return idata
 
+def hlr_nc_initvals(D, chains, seed=SEED, scale=0.1):
+    """Per-chain starting points: sigma2 = 1, small random raw coefficients."""
+    rng = np.random.default_rng(seed)
+    return [
+        {
+            "sigma2": 1.0,
+            "alpha_raw": rng.normal(0.0, scale),
+            "beta_raw": rng.normal(0.0, scale, size=D),
+        }
+        for _ in range(chains)
+    ]
 
 def summarize_pair(name, idata_s, idata_p, var_names):
     print("\n" + "=" * 70)
@@ -161,7 +174,12 @@ if __name__ == "__main__":
     print("\n>>> german_credit_hlr_nc")
     data_hlr = load("german_credit_interactions.json")
     fit_s_nc, idata_s_nc = run_stan("german_credit_hlr_nc.stan", data_hlr)
-    idata_p_nc = run_pymc(make_hlr_nc, data_hlr)
+    idata_p_nc = run_pymc(
+        make_hlr_nc,
+        data_hlr,
+        initvals=hlr_nc_initvals(data_hlr["D"], CHAINS),
+        init="adapt_diag",
+    )
     save_idata(idata_s_nc, "results/german_credit_hlr_nc_stan.nc")
     save_idata(idata_p_nc, "results/german_credit_hlr_nc_pymc.nc")
     summarize_pair("german_credit_hlr_nc", idata_s_nc, idata_p_nc, ["alpha", "sigma2"])
