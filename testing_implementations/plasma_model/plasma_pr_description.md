@@ -1,6 +1,6 @@
 # [Draft] Add plasma spectroscopy inverse-problem models (Langmore et al. 2022)
  
-> **Status:** draft for discussion. This PR adds **data, models and posteriors only**. No reference posterior draws are included. Several modelling choices are not fixed by the source paper; they are listed under [Open decisions](#open-decisions) and we would welcome feedback on those. 
+> **Status:** draft for discussion. This PR adds **models only**. Several modelling choices are not fixed by the source paper; they are listed under [Open decisions](#open-decisions) and we would welcome feedback on those. 
  
 ## Summary
  
@@ -88,42 +88,14 @@ With the included data, the paper's condition number (eq. 8) of the posterior is
 - **Ill-conditioning.** The integration operator is (numerically) low rank, so some directions are tightly constrained by the data and others only by the prior. The centred/non-centred pair isolates this effect in a case where the true posterior is known exactly.
 - **Non-linearity and non-Gaussianity.** The shifted centre, the softplus transforms and the signal-dependent noise all contribute.
 - **Potential multi-modality.** The paper shows that when the measured spectra have more peaks than the model can produce, several distinct explanations compete. The datasets here are simulated *from the model*, which should avoid that regime, but it is not yet verified across chains.
-## Files
- 
-Following `doc/DATABASE_CONTENT.md`:
- 
-```
-posterior_database/
-├── models/stan/
-│   ├── plasma_linear_noncentered.stan
-│   ├── plasma_linear_centered.stan
-│   └── plasma_shell.stan
-├── models/pymc/                                # [if the PyMC versions land in this PR]
-│   └── ...
-├── models/info/
-│   ├── plasma_linear_noncentered.info.json
-│   ├── plasma_linear_centered.info.json
-│   └── plasma_shell.info.json
-├── data/data/
-│   ├── plasma_linear.json.zip                  #  ~6 KB zipped
-│   ├── plasma_shell_lite.json.zip              #  ~7 KB zipped
-│   └── plasma_shell_full.json.zip              # ~26 KB zipped
-├── data/data-raw/
-│   ├── plasma_linear/plasma_linear.py
-│   ├── plasma_shell_lite/plasma_shell_lite.py
-│   └── plasma_shell_full/plasma_shell_full.py
-├── data/info/
-│   └── (one .info.json per dataset)
-├── posteriors/
-│   └── (four posterior .json files, reference_posterior_name: null)
-└── bibliography/references.bib                 # + langmore2022hamiltonian
-```
+
  
 ## Data: what comes from the paper and what is chosen
  
 The paper does not publish its data. Each dataset is a single draw from the prior followed by simulated noisy measurements, with the seed recorded in the generator script.
- 
+
 <details>
+ 
 <summary><b>Shell model constants</b></summary>
 
 | Quantity | Full | Lite | Source |
@@ -144,19 +116,18 @@ The paper does not publish its data. Each dataset is a single draw from the prio
 | $c_T$ | 2e-8 | same | chosen: line width ≈1.5–4.5 frequency spacings |
 | $c_V$ | 1e-4 | same | chosen: shift ≈ one line width per unit of $\tilde X_V$ |
 | Peak signal-to-noise | ≈20 | ≈15 | resulting |
- 
+
 </details>
 
 <details>
-
 <summary><b>Linear toy constants</b></summary>
+
 | Quantity | Value | Source |
 |---|---|---|
 | $N$, $M$ | 40, 20 | paper (Fig. 1/4) |
 | $\tau$, $\delta$, $\sigma$ | 0.2, 0.001, 1 | paper (Fig. 4) |
 | Grid | 40 equispaced points on [−1, 1] | chosen |
 | Forward matrix $A$ | Each row is a Gaussian-weighted local average (width 0.2), rows sum to 1 | chosen; the paper's $A$ is not given |
- 
 </details>
 
 ## Open decisions
@@ -180,25 +151,15 @@ These are points where the paper is ambiguous or silent. For each, we state what
 A purely numerical reformulation: the code uses $\tilde\nu^{-1} = (1-\mathcal V)/\nu_0$ directly instead of $\tilde\nu = \nu_0/(1-\mathcal V)$. This is mathematically identical and avoids a division by zero at $\mathcal V = 1$.
 
 
-## Questions for maintainers
+## Questions
  
-1. Are posteriors without reference draws welcome for models of this cost, in particular `plasma_shell_full`?
-2. Naming: are `plasma_linear`, `plasma_shell_lite` and `plasma_shell_full` acceptable, or is a different convention preferred for simulated datasets?
-3. Both shell datasets come from one generator script with a `lite`/`full` switch. Is it fine to have one script per `data-raw` folder that calls the shared generator, or should the code be duplicated?
-4. Which keywords should we use? Our suggestions are `inverse problem`, `ill-conditioned`, `simulated data`.
+1. Both shell datasets come from one generator script with a `lite`/`full` switch. Is it fine to have one script per `data-raw` folder that calls the shared generator, or should the code be duplicated?
 
-## Checklist
- 
-- [ ] Models, data, info files and posterior files added following `doc/DATABASE_CONTENT.md`
-- [ ] Data zipped; matrices stored as lists of rows
-- [ ] Generator scripts in `data/data-raw/`
-- [ ] BibTeX entry `langmore2022hamiltonian` added to `bibliography/references.bib`
-- [ ] `added_by` / `added_date` filled in: *[name]*, *[date]*
-- [ ] Open decisions D1–D3 agreed with supervisor
-- [ ] Stan/PyMC log-density equivalence check completed
 
 <details>
+
 <summary>BibTeX</summary>
+
 ```bibtex
 @misc{langmore2022hamiltonian,
   title         = {Hamiltonian {M}onte {C}arlo in Inverse Problems; Ill-Conditioning and Multi-Modality},
